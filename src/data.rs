@@ -63,4 +63,8 @@ impl DataHandler {
     pub fn get(&self, id: &String) -> Option<DataMessage> {
         Some(self.data.iter().find(|x| x.id == *id)?.clone())
     }
+
+    pub fn get_all(&self) -> &[DataMessage] {
+        &self.data
+    }
 }

@@ -1,13 +1,9 @@
 use std::sync::{Arc, RwLock};
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    routing::{get, post},
-    response::Response,
-    Router
-};
+use axum::{extract::{Path, State}, http::StatusCode, routing::{get, post}, response::Response, Router, Json};
 use rust_intro::rust_intro::DataMessage;
+
 use crate::data::DataHandler;
+use crate::serialization::MessageList;
 
 pub(crate) async fn init_routes() -> Router {
     let handler = Arc::new(RwLock::new(DataHandler::new()));
@@ -18,6 +14,8 @@ pub(crate) async fn init_routes() -> Router {
         .route("/proto/serialize/:path_param", get(route_serialize_testparam))
         .route("/proto/:data_message_id/:message", post(route_add_data_msg))
         .route("/proto/:data_message_id", get(route_get_data_msg))
+        .route("/proto", get(route_get_all_data_msg))
+        .route("/proto", post(route_add_multiple_msgs))
         .with_state(handler)
 }
 
@@ -55,4 +53,26 @@ async fn route_get_data_msg(State(state): State<Arc<RwLock<DataHandler>>>, Path(
     } else {
         Response::builder().status(StatusCode::NOT_FOUND).body(format!("no message found with id {:?}", id)).expect("could not create http response")
     }
+}
+
+async fn route_get_all_data_msg(State(state): State<Arc<RwLock<DataHandler>>>) -> Response<String> {
+    let lock = state.read().expect("could not get read lock");
+
+    let mut response = String::new();
+
+    for msg in lock.get_all() {
+        response += &format!("{:?}\n", msg)
+    }
+
+    Response::builder().status(StatusCode::OK).body(response).expect("could not create http response")
+}
+
+async fn route_add_multiple_msgs(State(state): State<Arc<RwLock<DataHandler>>>, Json(messages): Json<MessageList>) -> StatusCode {
+    let mut lock = state.write().expect("could not get read lock");
+
+    for msg in messages.messages {
+        lock.add(msg.into())
+    }
+
+    StatusCode::OK
 }
