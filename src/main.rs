@@ -2,6 +2,7 @@ extern crate core;
 
 mod routing;
 mod data;
+mod serialization;
 
 const PORT: u16 = 4200;
 
